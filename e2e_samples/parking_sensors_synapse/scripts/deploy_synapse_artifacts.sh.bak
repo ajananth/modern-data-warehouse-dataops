@@ -27,7 +27,7 @@
 set -o errexit
 set -o pipefail
 set -o nounset
-# set -o xtrace # For debugging
+set -o xtrace # For debugging
 
 ###################
 # REQUIRED ENV VARIABLES:
@@ -64,28 +64,25 @@ uploadSynapsePackagesToWorkspace(){
 
     #az synapse workspace wait --resource-group "${RESOURCE_GROUP_NAME}" --workspace-name "${SYNAPSE_WORKSPACE_NAME}" --created
     # Step 1: Get bearer token for the Data plane    
-    
-    token=$(az account get-access-token --resource ${synapseResource} --query accessToken --output tsv)
-    echo $token
-
+    token=$(az account get-access-token --resource ${synapseResource} --query accessToken --output tsv)    
     # Step 2: create workspace package placeholder
     synapseLibraryBaseUri=${SYNAPSE_DEV_ENDPOINT}/libraries
     synapseLibraryUri="${synapseLibraryBaseUri}/${name}?api-version=${dataPlaneApiVersion}"
 
-    if [[ -n $(az rest --method get --headers "Authorization=Bearer ${token}" "Content-Type=application/json;charset=utf-8" --url "${synapseLibraryBaseUri}?api-version=${dataPlaneApiVersion}" --query "value[?name == '${name}']" -o tsv) ]]; then
+    if [[ -n $(az rest --method get --headers "Authorization=Bearer ${token}" 'Content-Type=application/json;charset=utf-8' --url "${synapseLibraryBaseUri}?api-version=${dataPlaneApiVersion}" --query "value[?name == '${name}']" -o tsv) ]]; then
         echo "Library exists: ${name}"
         echo "Skipping creation"
         return 0
     fi
 
     az rest --method put --headers "Authorization=Bearer ${token}" "Content-Type=application/json;charset=utf-8" --url "${synapseLibraryUri}"
-    sleep 5
+    sleep 5s
 
     # Step 3: upload package content to workspace placeholder
     #az synapse workspace wait --resource-group "${RESOURCE_GROUP_NAME}" --workspace-name "${SYNAPSE_WORKSPACE_NAME}" --updated
     synapseLibraryUriForAppend="${SYNAPSE_DEV_ENDPOINT}/libraries/${name}?comp=appendblock&api-version=${dataPlaneApiVersion}"
     curl -i -X PUT -H "Authorization: Bearer ${token}" -H "Content-Type: application/octet-stream" --data-binary @./synapse/libs/"${name}" "${synapseLibraryUriForAppend}"
-    sleep 15
+    sleep 15s
   
     # Step4: Completing Package creation/Flush the library
     #az synapse workspace wait --resource-group "${RESOURCE_GROUP_NAME}" --workspace-name "${SYNAPSE_WORKSPACE_NAME}" --updated
@@ -101,41 +98,41 @@ uploadSynapseArtifactsToSparkPool(){
     echo "Uploading Synapse Artifacts to Spark Pool: ${BIG_DATAPOOL_NAME}"
 
     json_body="{
-        \"location\": \"${synapse_ws_location}\",
-        \"properties\": {
-            \"nodeCount\": 10,
-            \"isComputeIsolationEnabled\": false,
-            \"nodeSizeFamily\": \"MemoryOptimized\",
-            \"nodeSize\": \"Small\",
-            \"autoScale\": {
-                \"enabled\": true,
-                \"minNodeCount\": 3,
-                \"maxNodeCount\": 10
-            },
-            \"cacheSize\": 0,
-            \"dynamicExecutorAllocation\": {
-                \"enabled\": false,
-                \"minExecutors\": 0,
-                \"maxExecutors\": 10
-            },
-            \"autoPause\": {
-                \"enabled\": true,
-                \"delayInMinutes\": 15
-            },
-            \"sparkVersion\": \"2.4\",
-            \"libraryRequirements\": {
-                \"filename\": \"requirements.txt\",
-                \"content\": \"${requirementList}\"
-            },
-            \"sessionLevelPackagesEnabled\": true,
-            ${customLibraryList}
-            \"sparkConfigProperties\": {
-                \"configurationType\": \"File\",
-                \"filename\": \"spark_loganalytics_conf.txt\",
-                \"content\": \"spark.synapse.logAnalytics.enabled true\r\nspark.synapse.logAnalytics.workspaceId ${LOG_ANALYTICS_WS_ID}\r\nspark.synapse.logAnalytics.secret ${LOG_ANALYTICS_WS_KEY}\"
-            },
-        }
-    }"
+    \"location\": \"${synapse_ws_location}\",
+    \"properties\": {
+        \"nodeCount\": 10,
+        \"isComputeIsolationEnabled\": false,
+        \"nodeSizeFamily\": \"MemoryOptimized\",
+        \"nodeSize\": \"Small\",
+        \"autoScale\": {
+            \"enabled\": true,
+            \"minNodeCount\": 3,
+            \"maxNodeCount\": 10
+        },
+        \"cacheSize\": 0,
+        \"dynamicExecutorAllocation\": {
+            \"enabled\": false,
+            \"minExecutors\": 0,
+            \"maxExecutors\": 10
+        },
+        \"autoPause\": {
+            \"enabled\": true,
+            \"delayInMinutes\": 15
+        },
+        \"sparkVersion\": \"2.4\",
+        \"libraryRequirements\": {
+            \"filename\": \"requirements.txt\",
+            \"content\": \"${requirementList}\"
+        },
+        \"sessionLevelPackagesEnabled\": true,
+        ${customLibraryList}
+        \"sparkConfigProperties\": {
+            \"configurationType\": \"File\",
+            \"filename\": \"spark_loganalytics_conf.txt\",
+            \"content\": \"spark.synapse.logAnalytics.enabled true\r\nspark.synapse.logAnalytics.workspaceId ${LOG_ANALYTICS_WS_ID}\r\nspark.synapse.logAnalytics.secret ${LOG_ANALYTICS_WS_KEY}\"
+        },
+    }
+}"
     
     #Get bearer token for the management API
     managementApiUri="${synapseWorkspaceBaseUrl}/bigDataPools/${BIG_DATAPOOL_NAME}?api-version=${apiVersion}"
@@ -162,7 +159,6 @@ createNotebook() {
     # Thus, we are resorting to deploying notebooks in .ipynb format.
     # See here: https://github.com/Azure/azure-cli/issues/20037
     echo "Creating Synapse Notebook: $name"
-
     az synapse notebook create --file @./synapse/notebook/"${name}".ipynb --name="${name}" --workspace-name "${SYNAPSE_WORKSPACE_NAME}" --spark-pool-name "${BIG_DATAPOOL_NAME}"
 }
 createPipeline () {
@@ -187,7 +183,6 @@ getProvisioningState(){
     --name "$BIG_DATAPOOL_NAME" \
     --workspace-name "$SYNAPSE_WORKSPACE_NAME" \
     --resource-group "$RESOURCE_GROUP_NAME" \
-    --only-show-errors \
     --output json |
     jq -r '.provisioningState')
 }
@@ -205,9 +200,8 @@ UploadSql () {
     echo "Uploading sql script to Workspace: $name"
 
     #az synapse workspace wait --resource-group "${RESOURCE_GROUP_NAME}" --workspace-name "${SYNAPSE_WORKSPACE_NAME}" --created
-    # Step 1: Get bearer token for the Data plane
+    # Step 1: Get bearer token for the Data plane    
     token=$(az account get-access-token --resource ${synapseResource} --query accessToken --output tsv)    
-
     # Step 2: create workspace package placeholder
     synapseSqlBaseUri=${SYNAPSE_DEV_ENDPOINT}/sqlScripts
     synapseSqlApiUri="${synapseSqlBaseUri}/$name?api-version=${apiVersion}"
@@ -230,7 +224,7 @@ UploadSql () {
     }
     }"    
     curl -X PUT -H "Content-Type: application/json" -H "Authorization:Bearer $token" --data-raw "$json_body" --url $synapseSqlApiUri
-    sleep 5
+    sleep 5s
 }
 
 getProvisioningState
@@ -238,15 +232,16 @@ echo "$provision_state"
 
 while [ "$provision_state" != "Succeeded" ]
 do
-    if [ "$provision_state" == "Failed" ]; then break ; else sleep 10; fi
+    if [ "$provision_state" == "Failed" ]; then break ; else sleep 10s; fi
     getProvisioningState
-    echo "$provision_state: checking again in 10 seconds..."
+    echo "$provision_state"
 done
 
 # Build requirement.txt string to upload in the Spark Configuration
 configurationList=""
 while read -r p; do 
-    line=$(echo "$p" | tr -d '\r' | tr -d '\n')
+    #line="${p//'[\r\n]'/''}"
+    line=$(echo $p | sed -e 's/[\r\n]//g')
     if [ "$configurationList" != "" ]; then configurationList="$configurationList$line\r\n" ; else configurationList="$line\r\n"; fi
 done < $requirementsFileName
 
@@ -266,14 +261,6 @@ done
 customlibraryList="customLibraries:[$libraryList],"
 uploadSynapseArtifactsToSparkPool "${configurationList}" "${customlibraryList}"
 
-getProvisioningState
-echo "$provision_state"
-while [ "$provision_state" != "Succeeded" ]
-do
-    if [ "$provision_state" == "Failed" ]; then break ; else sleep 30; fi
-    getProvisioningState
-    echo "$provision_state: checking again in 30 seconds..."
-done
 
 # Deploy all Linked Services
 # Auxiliary string to parametrize the keyvault name on the ls json file
@@ -288,6 +275,15 @@ keyVaultLsContent="{
     }
 }"
 echo "$keyVaultLsContent" > ./synapse/workspace/linkedService/Ls_KeyVault_01.json
+
+getProvisioningState
+echo $provision_state
+while [ "$provision_state" != "Succeeded" ]
+do
+    if [ "$provision_state" == "Failed" ]; then break ; else sleep 10s; fi
+    getProvisioningState
+    echo "$provision_state"
+done
 
 createLinkedService "Ls_KeyVault_01"
 createLinkedService "Ls_AdlsGen2_01"

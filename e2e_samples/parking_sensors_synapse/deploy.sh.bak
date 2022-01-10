@@ -1,4 +1,5 @@
 #!/bin/bash
+
 # Access granted under MIT Open Source License: https://en.wikipedia.org/wiki/MIT_License
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated 
@@ -52,12 +53,7 @@ GITHUB_REPO_URL=$github_repo_url \
     bash -c "./scripts/deploy_azdo_service_connections_github.sh"
 
 # This replaces 'your_github_handle/your_repo' to deployer's github project
-# Adding "uname" check so that the command works on Mac.
-if [[ $(uname) == "Darwin" ]]; then
-    sed -i '' "s+your_github_handle/your_repo+$GITHUB_REPO+" devops/azure-pipelines-cd-release.yml
-else
-    sed -i "s+your_github_handle/your_repo+$GITHUB_REPO+" devops/azure-pipelines-cd-release.yml
-fi
+sed -i "s+your_github_handle/your_repo+$GITHUB_REPO+" devops/azure-pipelines-cd-release.yml
 
 # azure-pipelines-cd-release.yml pipeline require DEV_SYNAPSE_WORKSPACE_NAME set, this line retrieves this value from .env.dev file and sets it in DEV_SYNAPSE_WORKSPACE_NAME
 declare DEV_"$(grep -e '^SYNAPSE_WORKSPACE_NAME' .env.dev | tail -1 | xargs)"
