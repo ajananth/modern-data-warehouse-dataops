@@ -71,15 +71,6 @@
 	},
 	"resources": [
 		{
-			"name": "[concat(parameters('workspaceName'), '/synspdevv1')]",
-			"type": "Microsoft.Synapse/workspaces/bigDataPools",
-			"apiVersion": "2019-06-01-preview",
-			"properties": {
-				"annotations": []
-			},
-			"dependsOn": []
-		},
-		{
 			"name": "[concat(parameters('workspaceName'), '/P_Ingest_MelbParkingData')]",
 			"type": "Microsoft.Synapse/workspaces/pipelines",
 			"apiVersion": "2019-06-01-preview",
@@ -298,7 +289,7 @@
 						"userProperties": [],
 						"typeProperties": {
 							"notebook": {
-								"referenceName": "03_transform",
+								"referenceName": "03_transform_abr",
 								"type": "NotebookReference"
 							},
 							"parameters": {
@@ -377,7 +368,7 @@
 				"[concat(variables('workspaceId'), '/datasets/Ds_REST_MelbParkingData')]",
 				"[concat(variables('workspaceId'), '/datasets/Ds_AdlsGen2_MelbParkingData')]",
 				"[concat(variables('workspaceId'), '/notebooks/02_standardize')]",
-				"[concat(variables('workspaceId'), '/notebooks/03_transform')]",
+				"[concat(variables('workspaceId'), '/notebooks/03_transform_abr')]",
 				"[concat(variables('workspaceId'), '/sqlPools/', parameters('P_Ingest_MelbParkingData_properties_5_sqlPool_referenceName'))]"
 			]
 		},
@@ -1645,7 +1636,7 @@
 						"spark.dynamicAllocation.enabled": "false",
 						"spark.dynamicAllocation.minExecutors": "2",
 						"spark.dynamicAllocation.maxExecutors": "2",
-						"spark.autotune.trackingId": "5bb43d04-2efe-4ba4-af3a-5cdfa7e32469"
+						"spark.autotune.trackingId": "e32af62a-4128-4eb0-9818-1023942b3c10"
 					}
 				},
 				"metadata": {
@@ -1657,7 +1648,8 @@
 					},
 					"language_info": {
 						"name": "python"
-					}
+					},
+					"sessionKeepAliveTimeout": 30
 				},
 				"cells": [
 					{
@@ -1719,6 +1711,7 @@
 					},
 					{
 						"cell_type": "code",
+						"metadata": {},
 						"source": [
 							"import datetime\n",
 							"import os\n",
@@ -1948,6 +1941,95 @@
 			},
 			"dependsOn": [],
 			"location": "australiaeast"
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/synspdevv1')]",
+			"type": "Microsoft.Synapse/workspaces/bigDataPools",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/03_transform_abr')]",
+			"type": "Microsoft.Synapse/workspaces/notebooks",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"nbformat": 4,
+				"nbformat_minor": 2,
+				"sessionProperties": {
+					"driverMemory": "28g",
+					"driverCores": 4,
+					"executorMemory": "28g",
+					"executorCores": 4,
+					"numExecutors": 2,
+					"conf": {
+						"spark.dynamicAllocation.enabled": "false",
+						"spark.dynamicAllocation.minExecutors": "2",
+						"spark.dynamicAllocation.maxExecutors": "2",
+						"spark.autotune.trackingId": "28b191d1-4ce4-4bfc-ae5b-02b86063f33f"
+					}
+				},
+				"metadata": {
+					"saveOutput": true,
+					"enableDebugMode": false,
+					"kernelspec": {
+						"name": "synapse_pyspark",
+						"display_name": "Synapse PySpark"
+					},
+					"language_info": {
+						"name": "python"
+					},
+					"sessionKeepAliveTimeout": 30
+				},
+				"cells": [
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"# 1. Get dynamic pipeline parameters"
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"outputs_hidden": false,
+								"source_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"collapsed": true,
+							"tags": [
+								"parameters"
+							]
+						},
+						"source": [
+							"# Get pipeline name\n",
+							"pipelinename = 'pipeline_name'\n",
+							"\n",
+							"# Get pipeline runid\n",
+							"loadid = ''\n",
+							"\n",
+							"# Get keyvault linked service name\n",
+							"keyvaultlsname = 'Ls_KeyVault_01'"
+						],
+						"outputs": [],
+						"execution_count": null
+					}
+				]
+			},
+			"dependsOn": []
 		}
 	]
 }
