@@ -28,7 +28,7 @@
 		},
 		"Ls_KeyVault_01_properties_typeProperties_baseUrl": {
 			"type": "string",
-			"defaultValue": "https://mdwdops-kv-prod-v1.vault.azure.net/"
+			"defaultValue": "https://mdwdops-kv-dev-v1.vault.azure.net/"
 		},
 		"Ls_Rest_MelParkSensors_01_properties_typeProperties_url": {
 			"type": "string",
@@ -1645,7 +1645,7 @@
 						"spark.dynamicAllocation.enabled": "false",
 						"spark.dynamicAllocation.minExecutors": "2",
 						"spark.dynamicAllocation.maxExecutors": "2",
-						"spark.autotune.trackingId": "fa956c6e-8da2-4f3a-9696-6a244f753106"
+						"spark.autotune.trackingId": "5bb43d04-2efe-4ba4-af3a-5cdfa7e32469"
 					}
 				},
 				"metadata": {
@@ -1657,8 +1657,7 @@
 					},
 					"language_info": {
 						"name": "python"
-					},
-					"sessionKeepAliveTimeout": 30
+					}
 				},
 				"cells": [
 					{
@@ -1720,7 +1719,6 @@
 					},
 					{
 						"cell_type": "code",
-						"metadata": {},
 						"source": [
 							"import datetime\n",
 							"import os\n",
