@@ -28,7 +28,7 @@
 		},
 		"Ls_KeyVault_01_properties_typeProperties_baseUrl": {
 			"type": "string",
-			"defaultValue": "https://mdwdops-kv-dev-v1.vault.azure.net/"
+			"defaultValue": "https://mdwdops-kv-prod-v1.vault.azure.net/"
 		},
 		"Ls_Rest_MelParkSensors_01_properties_typeProperties_url": {
 			"type": "string",
@@ -62,10 +62,6 @@
 			"defaultValue": "synspdevv1"
 		},
 		"02_standardize_properties_bigDataPool_referenceName": {
-			"type": "string",
-			"defaultValue": "synspdevv1"
-		},
-		"03_transform_properties_bigDataPool_referenceName": {
 			"type": "string",
 			"defaultValue": "synspdevv1"
 		}
@@ -375,7 +371,7 @@
 					}
 				},
 				"annotations": [],
-				"lastPublishTime": "2022-01-10T22:10:27Z"
+				"lastPublishTime": "2021-10-26T23:43:06Z"
 			},
 			"dependsOn": [
 				"[concat(variables('workspaceId'), '/datasets/Ds_REST_MelbParkingData')]",
@@ -1639,26 +1635,30 @@
 			"properties": {
 				"nbformat": 4,
 				"nbformat_minor": 2,
-				"bigDataPool": {
-					"referenceName": "[parameters('03_transform_properties_bigDataPool_referenceName')]",
-					"type": "BigDataPoolReference"
-				},
 				"sessionProperties": {
 					"driverMemory": "28g",
 					"driverCores": 4,
 					"executorMemory": "28g",
 					"executorCores": 4,
 					"numExecutors": 2,
-					"conf": {}
+					"conf": {
+						"spark.dynamicAllocation.enabled": "false",
+						"spark.dynamicAllocation.minExecutors": "2",
+						"spark.dynamicAllocation.maxExecutors": "2",
+						"spark.autotune.trackingId": "fa956c6e-8da2-4f3a-9696-6a244f753106"
+					}
 				},
 				"metadata": {
+					"saveOutput": true,
+					"enableDebugMode": false,
 					"kernelspec": {
 						"name": "synapse_pyspark",
 						"display_name": "Synapse PySpark"
 					},
 					"language_info": {
 						"name": "python"
-					}
+					},
+					"sessionKeepAliveTimeout": 30
 				},
 				"cells": [
 					{
@@ -1672,8 +1672,7 @@
 						},
 						"source": [
 							"# 1. Get dynamic pipeline parameters"
-						],
-						"attachments": null
+						]
 					},
 					{
 						"cell_type": "code",
@@ -1696,13 +1695,12 @@
 							"# Get pipeline name\n",
 							"pipelinename = 'pipeline_name'\n",
 							"\n",
-							"# Get pipeline run id\n",
+							"# Get pipeline runid\n",
 							"loadid = ''\n",
 							"\n",
 							"# Get keyvault linked service name\n",
 							"keyvaultlsname = 'Ls_KeyVault_01'"
 						],
-						"attachments": null,
 						"outputs": [],
 						"execution_count": null
 					},
@@ -1716,12 +1714,13 @@
 							}
 						},
 						"source": [
-							"# 2. Transform and load Dimension tables\n"
-						],
-						"attachments": null
+							"# 2. Transform and load Dimension tables\n",
+							""
+						]
 					},
 					{
 						"cell_type": "code",
+						"metadata": {},
 						"source": [
 							"import datetime\n",
 							"import os\n",
@@ -1760,7 +1759,6 @@
 							"util.save_overwrite_unmanaged_table(spark, new_dim_location_sdf, table_name=\"dw.dim_location\", path=os.path.join(base_path, \"dim_location\"))\n",
 							"util.save_overwrite_unmanaged_table(spark, new_dim_st_marker_sdf, table_name=\"dw.dim_st_marker\", path=os.path.join(base_path, \"dim_st_marker\"))"
 						],
-						"attachments": null,
 						"outputs": [],
 						"execution_count": null
 					},
@@ -1775,8 +1773,7 @@
 						},
 						"source": [
 							"# 3. Transform and load Fact tables"
-						],
-						"attachments": null
+						]
 					},
 					{
 						"cell_type": "code",
@@ -1810,7 +1807,6 @@
 							"new_dim_st_marker_count = spark.read.table(\"dw.dim_st_marker\").count()\n",
 							"new_fact_parking_count = new_fact_parking.count()"
 						],
-						"attachments": null,
 						"outputs": [],
 						"execution_count": null
 					},
@@ -1825,8 +1821,7 @@
 						},
 						"source": [
 							"# 4. Observability: Logging to Azure Application Insights using OpenCensus Library"
-						],
-						"attachments": null
+						]
 					},
 					{
 						"cell_type": "code",
@@ -1874,7 +1869,6 @@
 							"#    sensordataMalformedCount = customDimensions.sensordata_malformed_count,\n",
 							"#    dimParkingbayCount       = customDimensions.new_parkingbay_count"
 						],
-						"attachments": null,
 						"outputs": [],
 						"execution_count": null
 					},
@@ -1889,8 +1883,7 @@
 						},
 						"source": [
 							"# 5. Observability: Logging to Log Analytics workspace using log4j"
-						],
-						"attachments": null
+						]
 					},
 					{
 						"cell_type": "code",
@@ -1939,7 +1932,6 @@
 							"#    SparkPoolName   = split(Message, '~', 3),\n",
 							"#    UserId          = split(Message, '~', 5)"
 						],
-						"attachments": null,
 						"outputs": [],
 						"execution_count": null
 					}
