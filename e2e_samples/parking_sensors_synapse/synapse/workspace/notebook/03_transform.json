@@ -3,25 +3,30 @@
 	"properties": {
 		"nbformat": 4,
 		"nbformat_minor": 2,
-		"bigDataPool": {
-			"referenceName": "synspdevv1",
-			"type": "BigDataPoolReference"
-		},
 		"sessionProperties": {
 			"driverMemory": "28g",
 			"driverCores": 4,
 			"executorMemory": "28g",
 			"executorCores": 4,
-			"numExecutors": 2
+			"numExecutors": 2,
+			"conf": {
+				"spark.dynamicAllocation.enabled": "false",
+				"spark.dynamicAllocation.minExecutors": "2",
+				"spark.dynamicAllocation.maxExecutors": "2",
+				"spark.autotune.trackingId": "5bb43d04-2efe-4ba4-af3a-5cdfa7e32469"
+			}
 		},
 		"metadata": {
+			"saveOutput": true,
+			"enableDebugMode": false,
 			"kernelspec": {
 				"name": "synapse_pyspark",
 				"display_name": "Synapse PySpark"
 			},
 			"language_info": {
 				"name": "python"
-			}
+			},
+			"sessionKeepAliveTimeout": 30
 		},
 		"cells": [
 			{
@@ -35,8 +40,7 @@
 				},
 				"source": [
 					"# 1. Get dynamic pipeline parameters"
-				],
-				"attachments": null
+				]
 			},
 			{
 				"cell_type": "code",
@@ -59,13 +63,12 @@
 					"# Get pipeline name\n",
 					"pipelinename = 'pipeline_name'\n",
 					"\n",
-					"# Get pipeline run id\n",
+					"# Get pipeline runid\n",
 					"loadid = ''\n",
 					"\n",
 					"# Get keyvault linked service name\n",
 					"keyvaultlsname = 'Ls_KeyVault_01'"
 				],
-				"attachments": null,
 				"execution_count": null
 			},
 			{
@@ -78,9 +81,9 @@
 					}
 				},
 				"source": [
-					"# 2. Transform and load Dimension tables\n"
-				],
-				"attachments": null
+					"# 2. Transform and load Dimension tables\n",
+					""
+				]
 			},
 			{
 				"cell_type": "code",
@@ -122,7 +125,6 @@
 					"util.save_overwrite_unmanaged_table(spark, new_dim_location_sdf, table_name=\"dw.dim_location\", path=os.path.join(base_path, \"dim_location\"))\n",
 					"util.save_overwrite_unmanaged_table(spark, new_dim_st_marker_sdf, table_name=\"dw.dim_st_marker\", path=os.path.join(base_path, \"dim_st_marker\"))"
 				],
-				"attachments": null,
 				"execution_count": null
 			},
 			{
@@ -136,8 +138,7 @@
 				},
 				"source": [
 					"# 3. Transform and load Fact tables"
-				],
-				"attachments": null
+				]
 			},
 			{
 				"cell_type": "code",
@@ -171,7 +172,6 @@
 					"new_dim_st_marker_count = spark.read.table(\"dw.dim_st_marker\").count()\n",
 					"new_fact_parking_count = new_fact_parking.count()"
 				],
-				"attachments": null,
 				"execution_count": null
 			},
 			{
@@ -185,8 +185,7 @@
 				},
 				"source": [
 					"# 4. Observability: Logging to Azure Application Insights using OpenCensus Library"
-				],
-				"attachments": null
+				]
 			},
 			{
 				"cell_type": "code",
@@ -234,7 +233,6 @@
 					"#    sensordataMalformedCount = customDimensions.sensordata_malformed_count,\n",
 					"#    dimParkingbayCount       = customDimensions.new_parkingbay_count"
 				],
-				"attachments": null,
 				"execution_count": null
 			},
 			{
@@ -248,8 +246,7 @@
 				},
 				"source": [
 					"# 5. Observability: Logging to Log Analytics workspace using log4j"
-				],
-				"attachments": null
+				]
 			},
 			{
 				"cell_type": "code",
@@ -298,7 +295,6 @@
 					"#    SparkPoolName   = split(Message, '~', 3),\n",
 					"#    UserId          = split(Message, '~', 5)"
 				],
-				"attachments": null,
 				"execution_count": null
 			}
 		]
