@@ -8,6 +8,12 @@
 		"sywsdevv1-WorkspaceDefaultSqlServer_connectionString": {
 			"value": ""
 		},
+		"P_Ingest_MelbParkingData_properties_4_sqlPool_referenceName": {
+			"value": "syndpdevv1"
+		},
+		"P_Ingest_MelbParkingData_arch_properties_5_sqlPool_referenceName": {
+			"value": "syndpdevv1"
+		},
 		"Ls_AdlsGen2_01_properties_typeProperties_url": {
 			"value": {
 				"type": "AzureKeyVaultSecret",
@@ -50,12 +56,6 @@
 		},
 		"03_transform_properties_bigDataPool_referenceName": {
 			"value": "synspdevv1"
-		},
-		"P_Ingest_MelbParkingData_properties_4_sqlPool_referenceName": {
-			"value": "syndpdevv1"
-		},
-		"P_Ingest_MelbParkingData_arch_properties_5_sqlPool_referenceName": {
-			"value": "syndpdevv1"
 		}
 	}
 }

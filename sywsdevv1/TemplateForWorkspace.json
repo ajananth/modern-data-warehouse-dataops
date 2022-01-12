@@ -11,6 +11,14 @@
 			"type": "secureString",
 			"metadata": "Secure string for 'connectionString' of 'sywsdevv1-WorkspaceDefaultSqlServer'"
 		},
+		"P_Ingest_MelbParkingData_properties_4_sqlPool_referenceName": {
+			"type": "string",
+			"defaultValue": "syndpdevv1"
+		},
+		"P_Ingest_MelbParkingData_arch_properties_5_sqlPool_referenceName": {
+			"type": "string",
+			"defaultValue": "syndpdevv1"
+		},
 		"Ls_AdlsGen2_01_properties_typeProperties_url": {
 			"type": "object",
 			"defaultValue": {
@@ -64,14 +72,6 @@
 		"03_transform_properties_bigDataPool_referenceName": {
 			"type": "string",
 			"defaultValue": "synspdevv1"
-		},
-		"P_Ingest_MelbParkingData_properties_4_sqlPool_referenceName": {
-			"type": "string",
-			"defaultValue": "syndpdevv1"
-		},
-		"P_Ingest_MelbParkingData_arch_properties_5_sqlPool_referenceName": {
-			"type": "string",
-			"defaultValue": "syndpdevv1"
 		}
 	},
 	"variables": {
@@ -86,6 +86,563 @@
 				"annotations": []
 			},
 			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/P_Ingest_MelbParkingData')]",
+			"type": "Microsoft.Synapse/workspaces/pipelines",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"description": "Run Spark Notebook",
+				"activities": [
+					{
+						"name": "Set infilefolder",
+						"type": "SetVariable",
+						"dependsOn": [],
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "infilefolder",
+							"value": {
+								"value": "@utcnow('yyyy_MM_dd_hh_mm_ss')",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "DownloadSensorData",
+						"type": "Copy",
+						"dependsOn": [
+							{
+								"activity": "Set infilefolder",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "RestSource",
+								"httpRequestTimeout": "00:01:40",
+								"requestInterval": "00.00:00:00.010",
+								"requestMethod": "GET"
+							},
+							"sink": {
+								"type": "JsonSink",
+								"storeSettings": {
+									"type": "AzureBlobFSWriteSettings"
+								},
+								"formatSettings": {
+									"type": "JsonWriteSettings"
+								}
+							},
+							"enableStaging": false
+						},
+						"inputs": [
+							{
+								"referenceName": "Ds_REST_MelbParkingData",
+								"type": "DatasetReference",
+								"parameters": {
+									"relativeurl": "dtpv-d4pf.json"
+								}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "Ds_AdlsGen2_MelbParkingData",
+								"type": "DatasetReference",
+								"parameters": {
+									"infilefolder": "@variables('infilefolder')",
+									"infilename": "MelbParkingSensorData.json",
+									"container": "datalake/data/lnd"
+								}
+							}
+						]
+					},
+					{
+						"name": "DownloadBayData",
+						"type": "Copy",
+						"dependsOn": [
+							{
+								"activity": "Set infilefolder",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "RestSource",
+								"httpRequestTimeout": "00:01:40",
+								"requestInterval": "00.00:00:00.010",
+								"requestMethod": "GET"
+							},
+							"sink": {
+								"type": "JsonSink",
+								"storeSettings": {
+									"type": "AzureBlobFSWriteSettings"
+								},
+								"formatSettings": {
+									"type": "JsonWriteSettings"
+								}
+							},
+							"enableStaging": false
+						},
+						"inputs": [
+							{
+								"referenceName": "Ds_REST_MelbParkingData",
+								"type": "DatasetReference",
+								"parameters": {
+									"relativeurl": "wuf8-susg.json"
+								}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "Ds_AdlsGen2_MelbParkingData",
+								"type": "DatasetReference",
+								"parameters": {
+									"infilefolder": "@variables('infilefolder')",
+									"infilename": "MelbParkingBayData.json",
+									"container": "datalake/data/lnd"
+								}
+							}
+						]
+					},
+					{
+						"name": "StandardizeData",
+						"type": "SynapseNotebook",
+						"dependsOn": [
+							{
+								"activity": "DownloadSensorData",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "DownloadBayData",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"notebook": {
+								"referenceName": "02_standardize",
+								"type": "NotebookReference"
+							},
+							"parameters": {
+								"infilefolder": {
+									"value": {
+										"value": "@variables('infilefolder')",
+										"type": "Expression"
+									},
+									"type": "string"
+								},
+								"loadid": {
+									"value": {
+										"value": "@pipeline().RunId",
+										"type": "Expression"
+									},
+									"type": "string"
+								},
+								"pipelinename": {
+									"value": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"type": "string"
+								},
+								"keyvaultlsname": {
+									"value": "Ls_KeyVault_01",
+									"type": "string"
+								},
+								"adls2lsname": {
+									"value": "Ls_AdlsGen2_01",
+									"type": "string"
+								}
+							}
+						}
+					},
+					{
+						"name": "Load SQL dedicated pool",
+						"type": "SqlPoolStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "StandardizeData",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"sqlPool": {
+							"referenceName": "[parameters('P_Ingest_MelbParkingData_properties_4_sqlPool_referenceName')]",
+							"type": "SqlPoolReference"
+						},
+						"typeProperties": {
+							"storedProcedureName": "dbo.load_dw",
+							"storedProcedureParameters": {
+								"load_id": {
+									"value": {
+										"value": "@pipeline().RunId",
+										"type": "Expression"
+									},
+									"type": "String"
+								}
+							}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {},
+					"cancelAfter": {}
+				},
+				"variables": {
+					"infilefolder": {
+						"type": "String",
+						"defaultValue": "Ind"
+					}
+				},
+				"annotations": [],
+				"lastPublishTime": "2021-10-26T23:43:06Z"
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/datasets/Ds_REST_MelbParkingData')]",
+				"[concat(variables('workspaceId'), '/datasets/Ds_AdlsGen2_MelbParkingData')]",
+				"[concat(variables('workspaceId'), '/notebooks/02_standardize')]",
+				"[concat(variables('workspaceId'), '/sqlPools/', parameters('P_Ingest_MelbParkingData_properties_4_sqlPool_referenceName'))]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/P_Ingest_MelbParkingData_arch')]",
+			"type": "Microsoft.Synapse/workspaces/pipelines",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"activities": [
+					{
+						"name": "Set infilefolder",
+						"type": "SetVariable",
+						"dependsOn": [],
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "infilefolder",
+							"value": {
+								"value": "@utcnow('yyyy_MM_dd_hh_mm_ss')",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "DownloadSensorData",
+						"type": "Copy",
+						"dependsOn": [
+							{
+								"activity": "Set infilefolder",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "RestSource",
+								"httpRequestTimeout": "00:01:40",
+								"requestInterval": "00.00:00:00.010",
+								"requestMethod": "GET"
+							},
+							"sink": {
+								"type": "JsonSink",
+								"storeSettings": {
+									"type": "AzureBlobFSWriteSettings"
+								},
+								"formatSettings": {
+									"type": "JsonWriteSettings"
+								}
+							},
+							"enableStaging": false
+						},
+						"inputs": [
+							{
+								"referenceName": "Ds_REST_MelbParkingData",
+								"type": "DatasetReference",
+								"parameters": {
+									"relativeurl": "dtpv-d4pf.json"
+								}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "Ds_AdlsGen2_MelbParkingData",
+								"type": "DatasetReference",
+								"parameters": {
+									"infilefolder": "@variables('infilefolder')",
+									"infilename": "MelbParkingSensorData.json",
+									"container": "datalake/data/lnd"
+								}
+							}
+						]
+					},
+					{
+						"name": "DownloadBayData",
+						"type": "Copy",
+						"dependsOn": [
+							{
+								"activity": "Set infilefolder",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "RestSource",
+								"httpRequestTimeout": "00:01:40",
+								"requestInterval": "00.00:00:00.010",
+								"requestMethod": "GET"
+							},
+							"sink": {
+								"type": "JsonSink",
+								"storeSettings": {
+									"type": "AzureBlobFSWriteSettings"
+								},
+								"formatSettings": {
+									"type": "JsonWriteSettings"
+								}
+							},
+							"enableStaging": false
+						},
+						"inputs": [
+							{
+								"referenceName": "Ds_REST_MelbParkingData",
+								"type": "DatasetReference",
+								"parameters": {
+									"relativeurl": "wuf8-susg.json"
+								}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "Ds_AdlsGen2_MelbParkingData",
+								"type": "DatasetReference",
+								"parameters": {
+									"infilefolder": "@variables('infilefolder')",
+									"infilename": "MelbParkingBayData.json",
+									"container": "datalake/data/lnd"
+								}
+							}
+						]
+					},
+					{
+						"name": "StandardizeData",
+						"type": "SynapseNotebook",
+						"dependsOn": [
+							{
+								"activity": "DownloadSensorData",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "DownloadBayData",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"notebook": {
+								"referenceName": "02_standardize",
+								"type": "NotebookReference"
+							},
+							"parameters": {
+								"infilefolder": {
+									"value": {
+										"value": "@variables('infilefolder')",
+										"type": "Expression"
+									},
+									"type": "string"
+								},
+								"loadid": {
+									"value": {
+										"value": "@pipeline().RunId",
+										"type": "Expression"
+									},
+									"type": "string"
+								},
+								"pipelinename": {
+									"value": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"type": "string"
+								},
+								"keyvaultlsname": {
+									"value": "Ls_KeyVault_01",
+									"type": "string"
+								},
+								"adls2lsname": {
+									"value": "Ls_AdlsGen2_01",
+									"type": "string"
+								}
+							}
+						}
+					},
+					{
+						"name": "TransformData",
+						"type": "SynapseNotebook",
+						"dependsOn": [
+							{
+								"activity": "StandardizeData",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"notebook": {
+								"referenceName": "02_standardize",
+								"type": "NotebookReference"
+							},
+							"parameters": {
+								"loadid": {
+									"value": {
+										"value": "@pipeline().RunId",
+										"type": "Expression"
+									},
+									"type": "string"
+								},
+								"pipelinename": {
+									"value": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"type": "string"
+								},
+								"keyvaultlsname": {
+									"value": "Ls_KeyVault_01",
+									"type": "string"
+								}
+							}
+						}
+					},
+					{
+						"name": "Load SQL dedicated pool",
+						"type": "SqlPoolStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "TransformData",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"sqlPool": {
+							"referenceName": "[parameters('P_Ingest_MelbParkingData_arch_properties_5_sqlPool_referenceName')]",
+							"type": "SqlPoolReference"
+						},
+						"typeProperties": {
+							"storedProcedureName": "dbo.load_dw",
+							"storedProcedureParameters": {
+								"load_id": {
+									"value": {
+										"value": "@pipeline().RunId",
+										"type": "Expression"
+									},
+									"type": "String"
+								}
+							}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {},
+					"cancelAfter": {}
+				},
+				"variables": {
+					"infilefolder": {
+						"type": "String",
+						"defaultValue": "Ind"
+					}
+				},
+				"annotations": [],
+				"lastPublishTime": "2021-10-26T23:43:06Z"
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/datasets/Ds_REST_MelbParkingData')]",
+				"[concat(variables('workspaceId'), '/datasets/Ds_AdlsGen2_MelbParkingData')]",
+				"[concat(variables('workspaceId'), '/notebooks/02_standardize')]",
+				"[concat(variables('workspaceId'), '/sqlPools/', parameters('P_Ingest_MelbParkingData_arch_properties_5_sqlPool_referenceName'))]"
+			]
 		},
 		{
 			"name": "[concat(parameters('workspaceName'), '/Ds_AdlsGen2_MelbParkingData')]",
@@ -1021,7 +1578,7 @@
 						"spark.dynamicAllocation.enabled": "false",
 						"spark.dynamicAllocation.minExecutors": "2",
 						"spark.dynamicAllocation.maxExecutors": "2",
-						"spark.autotune.trackingId": "37b5cc77-b52d-4ef9-b686-24447dc11f7e"
+						"spark.autotune.trackingId": "35d0a927-8494-4806-bbed-5097e3380133"
 					}
 				},
 				"metadata": {
@@ -1046,10 +1603,8 @@
 						"sparkVersion": "2.4",
 						"nodeCount": 10,
 						"cores": 4,
-						"memory": 28,
-						"automaticScaleJobs": false
-					},
-					"sessionKeepAliveTimeout": 30
+						"memory": 28
+					}
 				},
 				"cells": [
 					{
@@ -1394,10 +1949,8 @@
 						"sparkVersion": "2.4",
 						"nodeCount": 10,
 						"cores": 4,
-						"memory": 28,
-						"automaticScaleJobs": false
-					},
-					"sessionKeepAliveTimeout": 30
+						"memory": 28
+					}
 				},
 				"cells": [
 					{
@@ -1459,7 +2012,6 @@
 					},
 					{
 						"cell_type": "code",
-						"metadata": {},
 						"source": [
 							"import datetime\n",
 							"import os\n",
@@ -1689,562 +2241,6 @@
 			},
 			"dependsOn": [],
 			"location": "australiaeast"
-		},
-		{
-			"name": "[concat(parameters('workspaceName'), '/P_Ingest_MelbParkingData')]",
-			"type": "Microsoft.Synapse/workspaces/pipelines",
-			"apiVersion": "2019-06-01-preview",
-			"properties": {
-				"activities": [
-					{
-						"name": "Set infilefolder",
-						"type": "SetVariable",
-						"dependsOn": [],
-						"userProperties": [],
-						"typeProperties": {
-							"variableName": "infilefolder",
-							"value": {
-								"value": "@utcnow('yyyy_MM_dd_hh_mm_ss')",
-								"type": "Expression"
-							}
-						}
-					},
-					{
-						"name": "DownloadSensorData",
-						"type": "Copy",
-						"dependsOn": [
-							{
-								"activity": "Set infilefolder",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "7.00:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"source": {
-								"type": "RestSource",
-								"httpRequestTimeout": "00:01:40",
-								"requestInterval": "00.00:00:00.010",
-								"requestMethod": "GET"
-							},
-							"sink": {
-								"type": "JsonSink",
-								"storeSettings": {
-									"type": "AzureBlobFSWriteSettings"
-								},
-								"formatSettings": {
-									"type": "JsonWriteSettings"
-								}
-							},
-							"enableStaging": false
-						},
-						"inputs": [
-							{
-								"referenceName": "Ds_REST_MelbParkingData",
-								"type": "DatasetReference",
-								"parameters": {
-									"relativeurl": "dtpv-d4pf.json"
-								}
-							}
-						],
-						"outputs": [
-							{
-								"referenceName": "Ds_AdlsGen2_MelbParkingData",
-								"type": "DatasetReference",
-								"parameters": {
-									"infilefolder": "@variables('infilefolder')",
-									"infilename": "MelbParkingSensorData.json",
-									"container": "datalake/data/lnd"
-								}
-							}
-						]
-					},
-					{
-						"name": "DownloadBayData",
-						"type": "Copy",
-						"dependsOn": [
-							{
-								"activity": "Set infilefolder",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "7.00:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"source": {
-								"type": "RestSource",
-								"httpRequestTimeout": "00:01:40",
-								"requestInterval": "00.00:00:00.010",
-								"requestMethod": "GET"
-							},
-							"sink": {
-								"type": "JsonSink",
-								"storeSettings": {
-									"type": "AzureBlobFSWriteSettings"
-								},
-								"formatSettings": {
-									"type": "JsonWriteSettings"
-								}
-							},
-							"enableStaging": false
-						},
-						"inputs": [
-							{
-								"referenceName": "Ds_REST_MelbParkingData",
-								"type": "DatasetReference",
-								"parameters": {
-									"relativeurl": "wuf8-susg.json"
-								}
-							}
-						],
-						"outputs": [
-							{
-								"referenceName": "Ds_AdlsGen2_MelbParkingData",
-								"type": "DatasetReference",
-								"parameters": {
-									"infilefolder": "@variables('infilefolder')",
-									"infilename": "MelbParkingBayData.json",
-									"container": "datalake/data/lnd"
-								}
-							}
-						]
-					},
-					{
-						"name": "StandardizeData",
-						"type": "SynapseNotebook",
-						"dependsOn": [
-							{
-								"activity": "DownloadSensorData",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							},
-							{
-								"activity": "DownloadBayData",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "7.00:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"notebook": {
-								"referenceName": "02_standardize",
-								"type": "NotebookReference"
-							},
-							"parameters": {
-								"infilefolder": {
-									"value": {
-										"value": "@variables('infilefolder')",
-										"type": "Expression"
-									},
-									"type": "string"
-								},
-								"loadid": {
-									"value": {
-										"value": "@pipeline().RunId",
-										"type": "Expression"
-									},
-									"type": "string"
-								},
-								"pipelinename": {
-									"value": {
-										"value": "@pipeline().Pipeline",
-										"type": "Expression"
-									},
-									"type": "string"
-								},
-								"keyvaultlsname": {
-									"value": "Ls_KeyVault_01",
-									"type": "string"
-								},
-								"adls2lsname": {
-									"value": "Ls_AdlsGen2_01",
-									"type": "string"
-								}
-							}
-						}
-					},
-					{
-						"name": "Load SQL dedicated pool",
-						"type": "SqlPoolStoredProcedure",
-						"dependsOn": [
-							{
-								"activity": "StandardizeData",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "7.00:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"sqlPool": {
-							"referenceName": "[parameters('P_Ingest_MelbParkingData_properties_4_sqlPool_referenceName')]",
-							"type": "SqlPoolReference"
-						},
-						"typeProperties": {
-							"storedProcedureName": "dbo.load_dw",
-							"storedProcedureParameters": {
-								"load_id": {
-									"value": {
-										"value": "@pipeline().RunId",
-										"type": "Expression"
-									},
-									"type": "String"
-								}
-							}
-						}
-					}
-				],
-				"policy": {
-					"elapsedTimeMetric": {},
-					"cancelAfter": {}
-				},
-				"variables": {
-					"infilefolder": {
-						"type": "String",
-						"defaultValue": "Ind"
-					}
-				},
-				"annotations": [],
-				"lastPublishTime": "2021-10-26T23:43:06Z"
-			},
-			"dependsOn": [
-				"[concat(variables('workspaceId'), '/datasets/Ds_REST_MelbParkingData')]",
-				"[concat(variables('workspaceId'), '/datasets/Ds_AdlsGen2_MelbParkingData')]",
-				"[concat(variables('workspaceId'), '/notebooks/02_standardize')]",
-				"[concat(variables('workspaceId'), '/sqlPools/', parameters('P_Ingest_MelbParkingData_properties_4_sqlPool_referenceName'))]"
-			]
-		},
-		{
-			"name": "[concat(parameters('workspaceName'), '/P_Ingest_MelbParkingData_arch')]",
-			"type": "Microsoft.Synapse/workspaces/pipelines",
-			"apiVersion": "2019-06-01-preview",
-			"properties": {
-				"activities": [
-					{
-						"name": "Set infilefolder",
-						"type": "SetVariable",
-						"dependsOn": [],
-						"userProperties": [],
-						"typeProperties": {
-							"variableName": "infilefolder",
-							"value": {
-								"value": "@utcnow('yyyy_MM_dd_hh_mm_ss')",
-								"type": "Expression"
-							}
-						}
-					},
-					{
-						"name": "DownloadSensorData",
-						"type": "Copy",
-						"dependsOn": [
-							{
-								"activity": "Set infilefolder",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "7.00:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"source": {
-								"type": "RestSource",
-								"httpRequestTimeout": "00:01:40",
-								"requestInterval": "00.00:00:00.010",
-								"requestMethod": "GET"
-							},
-							"sink": {
-								"type": "JsonSink",
-								"storeSettings": {
-									"type": "AzureBlobFSWriteSettings"
-								},
-								"formatSettings": {
-									"type": "JsonWriteSettings"
-								}
-							},
-							"enableStaging": false
-						},
-						"inputs": [
-							{
-								"referenceName": "Ds_REST_MelbParkingData",
-								"type": "DatasetReference",
-								"parameters": {
-									"relativeurl": "dtpv-d4pf.json"
-								}
-							}
-						],
-						"outputs": [
-							{
-								"referenceName": "Ds_AdlsGen2_MelbParkingData",
-								"type": "DatasetReference",
-								"parameters": {
-									"infilefolder": "@variables('infilefolder')",
-									"infilename": "MelbParkingSensorData.json",
-									"container": "datalake/data/lnd"
-								}
-							}
-						]
-					},
-					{
-						"name": "DownloadBayData",
-						"type": "Copy",
-						"dependsOn": [
-							{
-								"activity": "Set infilefolder",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "7.00:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"source": {
-								"type": "RestSource",
-								"httpRequestTimeout": "00:01:40",
-								"requestInterval": "00.00:00:00.010",
-								"requestMethod": "GET"
-							},
-							"sink": {
-								"type": "JsonSink",
-								"storeSettings": {
-									"type": "AzureBlobFSWriteSettings"
-								},
-								"formatSettings": {
-									"type": "JsonWriteSettings"
-								}
-							},
-							"enableStaging": false
-						},
-						"inputs": [
-							{
-								"referenceName": "Ds_REST_MelbParkingData",
-								"type": "DatasetReference",
-								"parameters": {
-									"relativeurl": "wuf8-susg.json"
-								}
-							}
-						],
-						"outputs": [
-							{
-								"referenceName": "Ds_AdlsGen2_MelbParkingData",
-								"type": "DatasetReference",
-								"parameters": {
-									"infilefolder": "@variables('infilefolder')",
-									"infilename": "MelbParkingBayData.json",
-									"container": "datalake/data/lnd"
-								}
-							}
-						]
-					},
-					{
-						"name": "StandardizeData",
-						"type": "SynapseNotebook",
-						"dependsOn": [
-							{
-								"activity": "DownloadSensorData",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							},
-							{
-								"activity": "DownloadBayData",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "7.00:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"notebook": {
-								"referenceName": "02_standardize",
-								"type": "NotebookReference"
-							},
-							"parameters": {
-								"infilefolder": {
-									"value": {
-										"value": "@variables('infilefolder')",
-										"type": "Expression"
-									},
-									"type": "string"
-								},
-								"loadid": {
-									"value": {
-										"value": "@pipeline().RunId",
-										"type": "Expression"
-									},
-									"type": "string"
-								},
-								"pipelinename": {
-									"value": {
-										"value": "@pipeline().Pipeline",
-										"type": "Expression"
-									},
-									"type": "string"
-								},
-								"keyvaultlsname": {
-									"value": "Ls_KeyVault_01",
-									"type": "string"
-								},
-								"adls2lsname": {
-									"value": "Ls_AdlsGen2_01",
-									"type": "string"
-								}
-							}
-						}
-					},
-					{
-						"name": "TransformData",
-						"type": "SynapseNotebook",
-						"dependsOn": [
-							{
-								"activity": "StandardizeData",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "7.00:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"notebook": {
-								"referenceName": "02_standardize",
-								"type": "NotebookReference"
-							},
-							"parameters": {
-								"loadid": {
-									"value": {
-										"value": "@pipeline().RunId",
-										"type": "Expression"
-									},
-									"type": "string"
-								},
-								"pipelinename": {
-									"value": {
-										"value": "@pipeline().Pipeline",
-										"type": "Expression"
-									},
-									"type": "string"
-								},
-								"keyvaultlsname": {
-									"value": "Ls_KeyVault_01",
-									"type": "string"
-								}
-							}
-						}
-					},
-					{
-						"name": "Load SQL dedicated pool",
-						"type": "SqlPoolStoredProcedure",
-						"dependsOn": [
-							{
-								"activity": "TransformData",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "7.00:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"sqlPool": {
-							"referenceName": "[parameters('P_Ingest_MelbParkingData_arch_properties_5_sqlPool_referenceName')]",
-							"type": "SqlPoolReference"
-						},
-						"typeProperties": {
-							"storedProcedureName": "dbo.load_dw",
-							"storedProcedureParameters": {
-								"load_id": {
-									"value": {
-										"value": "@pipeline().RunId",
-										"type": "Expression"
-									},
-									"type": "String"
-								}
-							}
-						}
-					}
-				],
-				"policy": {
-					"elapsedTimeMetric": {},
-					"cancelAfter": {}
-				},
-				"variables": {
-					"infilefolder": {
-						"type": "String",
-						"defaultValue": "Ind"
-					}
-				},
-				"annotations": [],
-				"lastPublishTime": "2021-10-26T23:43:06Z"
-			},
-			"dependsOn": [
-				"[concat(variables('workspaceId'), '/datasets/Ds_REST_MelbParkingData')]",
-				"[concat(variables('workspaceId'), '/datasets/Ds_AdlsGen2_MelbParkingData')]",
-				"[concat(variables('workspaceId'), '/notebooks/02_standardize')]",
-				"[concat(variables('workspaceId'), '/sqlPools/', parameters('P_Ingest_MelbParkingData_arch_properties_5_sqlPool_referenceName'))]"
-			]
 		}
 	]
 }
