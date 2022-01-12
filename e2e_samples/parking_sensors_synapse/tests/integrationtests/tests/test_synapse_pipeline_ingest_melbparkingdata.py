@@ -60,7 +60,7 @@ def test_synapse_pipeline_succeeded(azure_credential, synapse_endpoint, sql_conn
     # Assert
     cursor = sql_connection.cursor()
     cursor.execute(
-        "SELECT COUNT(*) AS COUNT FROM dbo.fact_parking WHERE load_id='{load_id}'"
+        "SELECT COUNT(*) AS COUNT FROM dbo.dim_date"
         .format(load_id=this_run_id))
     row = cursor.fetchone()
     assert this_run_status == "Succeeded"
