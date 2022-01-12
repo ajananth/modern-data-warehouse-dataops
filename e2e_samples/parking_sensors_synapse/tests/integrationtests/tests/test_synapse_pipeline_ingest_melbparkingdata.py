@@ -60,7 +60,7 @@ def test_synapse_pipeline_succeeded(azure_credential, synapse_endpoint, sql_conn
     # Assert
     cursor = sql_connection.cursor()
     cursor.execute(
-        "SELECT COUNT(*) AS COUNT FROM dbo.fact_parking WHERE load_id='512a5924-727e-11ec-ba70-0923473ab924'"
+        "SELECT COUNT(*) AS COUNT FROM dbo.fact_parking WHERE load_id='512a5924-727e-11ec-ba70-0923473ab924'")
     row = cursor.fetchone()
     assert this_run_status == "Succeeded"
     assert row is not None
