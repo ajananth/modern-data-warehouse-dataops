@@ -215,7 +215,7 @@
 				"userProperties": [],
 				"typeProperties": {
 					"notebook": {
-						"referenceName": "02_standardize",
+						"referenceName": "03_transform",
 						"type": "NotebookReference"
 					},
 					"parameters": {
