@@ -11,10 +11,6 @@
 			"type": "secureString",
 			"metadata": "Secure string for 'connectionString' of 'sywsdevv1-WorkspaceDefaultSqlServer'"
 		},
-		"P_Ingest_MelbParkingData_properties_4_sqlPool_referenceName": {
-			"type": "string",
-			"defaultValue": "syndpdevv1"
-		},
 		"P_Ingest_MelbParkingData_arch_properties_5_sqlPool_referenceName": {
 			"type": "string",
 			"defaultValue": "syndpdevv1"
@@ -79,20 +75,10 @@
 	},
 	"resources": [
 		{
-			"name": "[concat(parameters('workspaceName'), '/synspdevv1')]",
-			"type": "Microsoft.Synapse/workspaces/bigDataPools",
-			"apiVersion": "2019-06-01-preview",
-			"properties": {
-				"annotations": []
-			},
-			"dependsOn": []
-		},
-		{
 			"name": "[concat(parameters('workspaceName'), '/P_Ingest_MelbParkingData')]",
 			"type": "Microsoft.Synapse/workspaces/pipelines",
 			"apiVersion": "2019-06-01-preview",
 			"properties": {
-				"description": "Run Spark Notebook",
 				"activities": [
 					{
 						"name": "Set infilefolder",
@@ -285,42 +271,6 @@
 								}
 							}
 						}
-					},
-					{
-						"name": "Load SQL dedicated pool",
-						"type": "SqlPoolStoredProcedure",
-						"dependsOn": [
-							{
-								"activity": "StandardizeData",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "7.00:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"sqlPool": {
-							"referenceName": "[parameters('P_Ingest_MelbParkingData_properties_4_sqlPool_referenceName')]",
-							"type": "SqlPoolReference"
-						},
-						"typeProperties": {
-							"storedProcedureName": "dbo.load_dw",
-							"storedProcedureParameters": {
-								"load_id": {
-									"value": {
-										"value": "@pipeline().RunId",
-										"type": "Expression"
-									},
-									"type": "String"
-								}
-							}
-						}
 					}
 				],
 				"policy": {
@@ -339,8 +289,7 @@
 			"dependsOn": [
 				"[concat(variables('workspaceId'), '/datasets/Ds_REST_MelbParkingData')]",
 				"[concat(variables('workspaceId'), '/datasets/Ds_AdlsGen2_MelbParkingData')]",
-				"[concat(variables('workspaceId'), '/notebooks/02_standardize')]",
-				"[concat(variables('workspaceId'), '/sqlPools/', parameters('P_Ingest_MelbParkingData_properties_4_sqlPool_referenceName'))]"
+				"[concat(variables('workspaceId'), '/notebooks/02_standardize')]"
 			]
 		},
 		{
@@ -562,7 +511,7 @@
 						"userProperties": [],
 						"typeProperties": {
 							"notebook": {
-								"referenceName": "02_standardize",
+								"referenceName": "03_transform",
 								"type": "NotebookReference"
 							},
 							"parameters": {
@@ -641,6 +590,7 @@
 				"[concat(variables('workspaceId'), '/datasets/Ds_REST_MelbParkingData')]",
 				"[concat(variables('workspaceId'), '/datasets/Ds_AdlsGen2_MelbParkingData')]",
 				"[concat(variables('workspaceId'), '/notebooks/02_standardize')]",
+				"[concat(variables('workspaceId'), '/notebooks/03_transform')]",
 				"[concat(variables('workspaceId'), '/sqlPools/', parameters('P_Ingest_MelbParkingData_arch_properties_5_sqlPool_referenceName'))]"
 			]
 		},
@@ -2241,6 +2191,15 @@
 			},
 			"dependsOn": [],
 			"location": "australiaeast"
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/synspdevv1')]",
+			"type": "Microsoft.Synapse/workspaces/bigDataPools",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": []
+			},
+			"dependsOn": []
 		}
 	]
 }
