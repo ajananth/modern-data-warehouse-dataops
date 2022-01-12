@@ -1,6 +1,7 @@
 {
 	"name": "P_Ingest_MelbParkingData",
 	"properties": {
+		"description": "Run Spark Notebook",
 		"activities": [
 			{
 				"name": "Set infilefolder",
