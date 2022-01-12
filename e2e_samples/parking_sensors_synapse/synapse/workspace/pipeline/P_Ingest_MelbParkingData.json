@@ -214,6 +214,10 @@
 					"secureInput": false
 				},
 				"userProperties": [],
+				"sqlPool": {
+					"referenceName": "syndpdevv1",
+					"type": "SqlPoolReference"
+				},
 				"typeProperties": {
 					"storedProcedureName": "dbo.load_dw",
 					"storedProcedureParameters": {
